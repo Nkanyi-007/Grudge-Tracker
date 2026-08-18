@@ -16,7 +16,7 @@ $grudges = [
 ?>
 
 <div class="dashboard-top">
-  <h1 class="graffiti-heading">ALL GRUDGES</h1>
+ <h1 class="graffiti-heading heading-yellow-orange">ALL GRUDGES</h1>
   <a href="log-grudge.php" class="btn-sticker btn-pink btn-small">+ ADD GRUDGE</a>
 </div>
 

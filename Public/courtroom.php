@@ -43,7 +43,7 @@ $pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'))
 
 <div class="dashboard-top">
   <div>
-    <h1 class="graffiti-heading">DISPUTE COURTROOM</h1>
+    <h1 class="graffiti-heading heading-orange-pink">DISPUTE COURTROOM</h1>
     <p class="auth-subtext">Present your case. Defend your record. Let the truth be judged.</p>
   </div>
   <a href="#" class="btn-sticker btn-pink btn-small">+ FILE A DISPUTE</a>
@@ -153,8 +153,7 @@ $pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'))
         </div>
       </div>
 
-      <button type="button" class="btn-outline btn-outline-pink btn-full-outline">CAST YOUR VOTE</button>
-    </div>
+      <button type="button" class="btn-outline btn-outline-pink btn-full-outline" onclick="openVerdictModal()">CAST YOUR VOTE</button>
 
     <!-- Court action buttons -->
     <div class="evidence-card court-actions-card">
@@ -202,5 +201,41 @@ $pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'))
   </div>
 
 </div>
+
+<!-- Jury Verdict Modal -->
+<div class="verdict-modal-overlay" id="verdictModalOverlay">
+  <div class="evidence-card verdict-modal">
+    <div class="tape tape-left"></div>
+    <div class="tape tape-right"></div>
+    <button type="button" class="modal-close" onclick="closeVerdictModal()">✕</button>
+
+    <h2 class="verdict-modal-heading">CAST YOUR VERDICT</h2>
+    <p class="auth-subtext">Case #GRD-015 — They broke my trust.</p>
+
+    <p class="verdict-modal-question">Based on the evidence, how do you find the defendant?</p>
+
+    <div class="verdict-choice-grid">
+      <button type="button" class="verdict-choice-btn choice-guilty" onclick="selectVerdict('guilty')">
+        <span class="verdict-choice-label">GUILTY</span>
+        <span class="verdict-choice-sub">The claims hold up.</span>
+      </button>
+
+      <button type="button" class="verdict-choice-btn choice-innocent" onclick="selectVerdict('innocent')">
+        <span class="verdict-choice-label">INNOCENT</span>
+        <span class="verdict-choice-sub">Not enough evidence.</span>
+      </button>
+    </div>
+
+    <div class="verdict-reasoning-group">
+      <label for="verdictReasoning">WHY? (OPTIONAL)</label>
+      <textarea id="verdictReasoning" rows="2" placeholder="Explain your reasoning to the court..."></textarea>
+    </div>
+
+    <button type="button" class="btn-sticker btn-submit-verdict" onclick="submitVerdict()">SUBMIT VERDICT</button>
+    <p class="verdict-confirm-msg" id="verdictConfirmMsg"></p>
+  </div>
+</div>
+
+<?php include 'includes/footer.php'; ?>
 
 <?php include 'includes/footer.php'; ?>
