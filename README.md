@@ -61,7 +61,10 @@ Clone this repo into C:\xampp\htdocs\Grudge-Tracker\
 Start Apache and MySQL in XAMPP
 Import database/grudge_tracker.sql into MySQL via phpMyAdmin
 Visit 
+
 http://localhost/Grudge-Tracker/Public/login.php
 Status
 
 Backend and database integration are complete — auth, grudge CRUD, jury voting, and trust score/XP logic are all live and wired to MySQL. Frontend polish is ongoing, primarily the rollout of a custom grunge-style SVG icon set across all pages to replace the current placeholder icons.
+
+Demo video and ER diagram can be found from:https://drive.google.com/drive/folders/1AKYO9D0KJ2vEGeiVJlrj8NzC5xKPKB1M?usp=sharing
