@@ -1,8 +1,9 @@
 <?php
+// session_start();
 $pageTitle = "Dashboard — Grudge Tracker";
 include 'includes/header.php';
 
-$username = "PETTY PRINCE";
+$username = $_SESSION['username'] ?? 'Guest';
 $level = 42;
 $xpCurrent = 640;
 $xpTotal = 1000;
@@ -29,7 +30,10 @@ $archivedLen = ($archived / $totalGrudges) * $circumference;
 ?>
 
 <div class="dashboard-top">
-  <h1 class="graffiti-heading">EVERY OFFENSE. NEVER FORGOTTEN.</h1>
+  <div>
+    <h1 class="graffiti-heading">EVERY OFFENSE. NEVER FORGOTTEN.</h1>
+    <h3 class="welcome-heading">Welcome back, <?php echo htmlspecialchars($username); ?></h3>
+  </div>
   <a href="log-grudge.php" class="btn-sticker btn-pink btn-small">+ ADD GRUDGE</a>
 </div>
 
@@ -100,52 +104,3 @@ $archivedLen = ($archived / $totalGrudges) * $circumference;
 </div>
 
 <?php include 'includes/footer.php'; ?>
-
-/* ---------- DASHBOARD v2 ---------- */
-.dashboard-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-.btn-small { width: auto; padding: 0.7rem 1.4rem; }
-
-.dashboard-columns {
-  display: flex;
-  gap: 2rem;
-  align-items: flex-start;
-}
-.dashboard-main-col { flex: 2; }
-.dashboard-side-col { flex: 1; display: flex; flex-direction: column; gap: 1.5rem; }
-
-.donut-wrap { display: flex; align-items: center; gap: 1.5rem; }
-.donut-chart { width: 130px; height: 130px; }
-.donut-number { font-size: 22px; fill: #fff; font-family: var(--font-heading); }
-.donut-label { font-size: 9px; fill: #888; }
-
-.donut-legend { list-style: none; font-size: 0.8rem; color: #ccc; }
-.donut-legend li { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-.donut-legend b { margin-left: auto; color: #fff; }
-
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot-pink { background: var(--pink); }
-.dot-orange { background: var(--orange); }
-.dot-yellow { background: var(--yellow); }
-.dot-grey { background: #666; }
-
-.progress-level {
-  font-family: var(--font-heading);
-  color: var(--green);
-  font-size: 1.2rem;
-  margin-bottom: 0.6rem;
-}
-.xp-bar {
-  width: 100%;
-  height: 14px;
-  background: #0d0d0d;
-  border: 2px solid #333;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.xp-bar-fill { height: 100%; background: var(--green); }
-.xp-label { margin-top: 0.5rem; font-size: 0.8rem; color: #888; }

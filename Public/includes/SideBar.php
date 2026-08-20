@@ -15,7 +15,7 @@
 
   <div class="sidebar-user">
     <div class="mascot-badge">👑</div>
-    <p class="sidebar-username">PETTY PRINCE</p>
+    <p class="sidebar-username"><?php echo htmlspecialchars($_SESSION['username'] ?? 'Guest'); ?></p>
     <p class="sidebar-level">LEVEL 42</p>
     <div class="xp-bar-mini">
       <div class="xp-bar-mini-fill" style="width: 64%;"></div>

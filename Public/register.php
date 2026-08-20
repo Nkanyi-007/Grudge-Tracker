@@ -1,6 +1,41 @@
 <?php
-// Static template for now — DB/auth logic gets wired in later
+require 'includes/db.php';
+
 $pageTitle = "Register — Grudge Tracker";
+$error = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+    $confirmPassword = $_POST['confirm_password'];
+
+    if ($password !== $confirmPassword) {
+        $error = "Passwords don't match.";
+    } else {
+        // Check if username or email already exists
+        $checkStmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $checkStmt->execute([$username, $email]);
+
+        if ($checkStmt->fetch()) {
+            $error = "That username or email is already taken.";
+        } else {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+            $insertStmt = $pdo->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
+            $insertStmt->execute([$username, $email, $hashedPassword]);
+
+            // Log them in immediately after registering
+            session_start();
+            $_SESSION['user_id'] = $pdo->lastInsertId();
+            $_SESSION['username'] = $username;
+
+            header("Location: dashboard.php");
+            exit;
+        }
+    }
+}
+
 include 'includes/header.php';
 ?>
 
@@ -12,7 +47,11 @@ include 'includes/header.php';
     <h1 class="graffiti-heading">FILE YOUR FIRST GRUDGE</h1>
     <p class="auth-subtext">Every account starts with zero trust. Earn it.</p>
 
-    <form action="#" method="POST" class="auth-form">
+    <?php if ($error): ?>
+      <p style="color: var(--pink); font-size: 0.85rem; margin-bottom: 1rem;"><?php echo htmlspecialchars($error); ?></p>
+    <?php endif; ?>
+
+    <form action="register.php" method="POST" class="auth-form">
       <div class="form-group">
         <label for="username">USERNAME</label>
         <input type="text" id="username" name="username" placeholder="the_unforgiving" required>

@@ -1,22 +1,23 @@
 <?php
+require 'includes/db.php';
+
 $pageTitle = "All Grudges — Grudge Tracker";
 include 'includes/header.php';
 
-// Dummy data for now — will be replaced with a DB query later
-$grudges = [
-  ["title" => "Ate my leftover pasta without asking", "category" => "Roommate", "severity" => "High", "status" => "Active", "date" => "Aug 4, 2026"],
-  ["title" => "Took credit for my idea in the meeting", "category" => "Work", "severity" => "Critical", "status" => "In Progress", "date" => "Aug 2, 2026"],
-  ["title" => "Never returned my charger", "category" => "Friend", "severity" => "Low", "status" => "Resolved", "date" => "Jul 30, 2026"],
-  ["title" => "Cancelled plans last minute again", "category" => "Friend", "severity" => "Medium", "status" => "Active", "date" => "Jul 28, 2026"],
-  ["title" => "Parked across two spaces", "category" => "Stranger", "severity" => "Low", "status" => "Archived", "date" => "Jul 25, 2026"],
-  ["title" => "Didn't invite me to the group trip", "category" => "Friend", "severity" => "High", "status" => "In Progress", "date" => "Jul 20, 2026"],
-  ["title" => "Loud music at 2am, third time", "category" => "Roommate", "severity" => "Critical", "status" => "Active", "date" => "Jul 18, 2026"],
-  ["title" => "Ghosted after I helped move apartments", "category" => "Friend", "severity" => "Critical", "status" => "Resolved", "date" => "Jul 10, 2026"],
-];
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$userId = $_SESSION['user_id'];
+
+$stmt = $pdo->prepare("SELECT * FROM grudges WHERE user_id = ? ORDER BY date_occurred DESC");
+$stmt->execute([$userId]);
+$grudges = $stmt->fetchAll();
 ?>
 
 <div class="dashboard-top">
- <h1 class="graffiti-heading heading-yellow-orange">ALL GRUDGES</h1>
+  <h1 class="graffiti-heading heading-yellow-orange">ALL GRUDGES</h1>
   <a href="log-grudge.php" class="btn-sticker btn-pink btn-small">+ ADD GRUDGE</a>
 </div>
 
@@ -46,6 +47,10 @@ $grudges = [
   </select>
 </div>
 
+<?php if (count($grudges) === 0): ?>
+  <p class="no-results">No grudges logged yet. Whatever you're holding back — let it out.</p>
+<?php else: ?>
+
 <div class="grudge-grid" id="grudgeGrid">
   <?php foreach ($grudges as $grudge): ?>
   <div class="evidence-card grudge-card"
@@ -55,12 +60,14 @@ $grudges = [
     <div class="tape tape-left"></div>
     <span class="severity-tag severity-<?php echo strtolower($grudge['severity']); ?>"><?php echo strtoupper($grudge['severity']); ?></span>
     <h3 class="grudge-card-title"><?php echo htmlspecialchars($grudge['title']); ?></h3>
-    <p class="grudge-card-meta"><?php echo $grudge['category']; ?> · <?php echo $grudge['date']; ?></p>
+    <p class="grudge-card-meta"><?php echo htmlspecialchars($grudge['category']); ?> · <?php echo date('M j, Y', strtotime($grudge['date_occurred'])); ?></p>
     <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $grudge['status'])); ?>"><?php echo $grudge['status']; ?></span>
   </div>
   <?php endforeach; ?>
 </div>
 
 <p class="no-results" id="noResults" style="display: none;">No grudges match that search. Maybe you've let it go. Growth.</p>
+
+<?php endif; ?>
 
 <?php include 'includes/footer.php'; ?>

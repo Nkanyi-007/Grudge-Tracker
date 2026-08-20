@@ -1,17 +1,74 @@
 <?php
+require 'includes/db.php';
+
 $pageTitle = "Log a Grudge — Grudge Tracker";
 include 'includes/header.php';
+
+// Protect this page — must be logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$error = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $title = trim($_POST['title']);
+    $person = trim($_POST['person']);
+    $category = $_POST['category'];
+    $dateOccurred = $_POST['date'];
+    $severity = $_POST['severity'];
+    $emoji = $_POST['emoji'] ?? null;
+    $notes = trim($_POST['notes']);
+    $userId = $_SESSION['user_id'];
+
+    if (empty($title) || empty($person) || empty($category) || empty($dateOccurred) || empty($severity)) {
+        $error = "Please fill in all required fields.";
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO grudges (user_id, title, person_involved, category, severity, emoji, notes, date_occurred) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$userId, $title, $person, $category, $severity, $emoji, $notes, $dateOccurred]);
+        $grudgeId = $pdo->lastInsertId();
+
+        // Handle evidence uploads, if any were provided
+        if (!empty($_FILES['evidence']['name'][0])) {
+            $uploadDir = 'uploads/evidence/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            foreach ($_FILES['evidence']['name'] as $index => $fileName) {
+                if ($_FILES['evidence']['error'][$index] === 0) {
+                    $tmpPath = $_FILES['evidence']['tmp_name'][$index];
+                    $safeName = time() . '_' . basename($fileName);
+                    $destination = $uploadDir . $safeName;
+
+                    if (move_uploaded_file($tmpPath, $destination)) {
+                        $evidenceStmt = $pdo->prepare("INSERT INTO grudge_evidence (grudge_id, file_path) VALUES (?, ?)");
+                        $evidenceStmt->execute([$grudgeId, $destination]);
+                    }
+                }
+            }
+        }
+
+        header("Location: all-grudges.php");
+        exit;
+    }
+}
 ?>
 
 <div class="dashboard-top">
-<h1 class="graffiti-heading heading-cyan-pink">GET IT OFF YOUR CHEST</h1>
+  <h1 class="graffiti-heading heading-cyan-pink">GET IT OFF YOUR CHEST</h1>
 </div>
 
 <div class="evidence-card log-grudge-card">
   <div class="tape tape-left"></div>
   <div class="tape tape-right"></div>
 
-  <form action="#" method="POST" enctype="multipart/form-data" class="grudge-form">
+  <?php if ($error): ?>
+    <p style="color: var(--pink); font-size: 0.85rem; margin-bottom: 1rem;"><?php echo htmlspecialchars($error); ?></p>
+  <?php endif; ?>
+
+  <form action="log-grudge.php" method="POST" enctype="multipart/form-data" class="grudge-form">
 
     <div class="form-group">
       <label for="title">WHAT HAPPENED</label>

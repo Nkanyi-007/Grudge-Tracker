@@ -1736,3 +1736,13 @@ body {
   margin-top: 0.8rem;
   min-height: 1.2rem;
 }
+
+/* Dashboard welcoming line  */
+.welcome-heading {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--cyan);
+  text-shadow: 2px 2px 0 var(--pink);
+  transform: rotate(-1deg);
+  margin-top: 0.5rem;
+}
