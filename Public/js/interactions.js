@@ -79,3 +79,26 @@ function submitVerdict() {
   confirmMsg.style.color = "#52FF6B";
   setTimeout(closeVerdictModal, 1800);
 }
+
+// Jury verdict modal
+function openVerdictModal() {
+  const overlay = document.getElementById('verdictModalOverlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function closeVerdictModal() {
+  const overlay = document.getElementById('verdictModalOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function selectVerdict(choice) {
+  document.querySelectorAll('.verdict-choice-btn').forEach(btn => btn.classList.remove('selected'));
+  document.getElementById(choice === 'guilty' ? 'choiceGuilty' : 'choiceInnocent').classList.add('selected');
+}
+
+function toggleForm(id) {
+  const form = document.getElementById(id);
+  if (form) {
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+}

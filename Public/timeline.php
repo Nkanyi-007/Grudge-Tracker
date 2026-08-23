@@ -1,25 +1,32 @@
 <?php
+require 'includes/db.php';
+
 $pageTitle = "Timeline — Grudge Tracker";
 include 'includes/header.php';
 
-// Dummy data for now — will be replaced with a DB query, ordered by date, later
-$timelineEvents = [
-  ["title" => "Loud music at 2am, third time", "category" => "Roommate", "severity" => "Critical", "date" => "Jul 18, 2026", "note" => "This is becoming a pattern. Documenting for the record."],
-  ["title" => "Didn't invite me to the group trip", "category" => "Friend", "severity" => "High", "date" => "Jul 20, 2026", "note" => "Found out through a story post. Not great."],
-  ["title" => "Parked across two spaces", "category" => "Stranger", "severity" => "Low", "date" => "Jul 25, 2026", "note" => "Petty but satisfying to log."],
-  ["title" => "Cancelled plans last minute again", "category" => "Friend", "severity" => "Medium", "date" => "Jul 28, 2026", "note" => "Third time this month. Pattern confirmed."],
-  ["title" => "Never returned my charger", "category" => "Friend", "severity" => "Low", "date" => "Jul 30, 2026", "note" => "Resolved — they finally gave it back."],
-  ["title" => "Took credit for my idea in the meeting", "category" => "Work", "severity" => "Critical", "date" => "Aug 2, 2026", "note" => "Filed a dispute over this one."],
-  ["title" => "Ate my leftover pasta without asking", "category" => "Roommate", "severity" => "High", "date" => "Aug 4, 2026", "note" => "The betrayal runs deep."],
-];
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$userId = $_SESSION['user_id'];
+
+// Pull all grudges for this user, oldest to newest, so the timeline reads chronologically
+$stmt = $pdo->prepare("SELECT * FROM grudges WHERE user_id = ? ORDER BY date_occurred ASC");
+$stmt->execute([$userId]);
+$timelineEvents = $stmt->fetchAll();
 ?>
 
 <div class="dashboard-top">
   <div>
-   <h1 class="graffiti-heading heading-green-cyan">THE TIMELINE</h1>
+    <h1 class="graffiti-heading heading-green-cyan">THE TIMELINE</h1>
     <p class="auth-subtext">Every grudge, in order. Nothing forgotten.</p>
   </div>
 </div>
+
+<?php if (count($timelineEvents) === 0): ?>
+  <p class="no-results">Nothing logged yet. Your timeline starts the moment you do.</p>
+<?php else: ?>
 
 <div class="timeline-wrap">
   <div class="timeline-line"></div>
@@ -31,17 +38,19 @@ $timelineEvents = [
       <div class="tape tape-left"></div>
       <div class="timeline-card-header">
         <span class="severity-tag severity-<?php echo strtolower($event['severity']); ?>"><?php echo strtoupper($event['severity']); ?></span>
-        <span class="timeline-date"><?php echo $event['date']; ?></span>
+        <span class="timeline-date"><?php echo date('M j, Y', strtotime($event['date_occurred'])); ?></span>
       </div>
       <h3 class="timeline-title"><?php echo htmlspecialchars($event['title']); ?></h3>
-      <p class="timeline-category"><?php echo $event['category']; ?></p>
+      <p class="timeline-category"><?php echo htmlspecialchars($event['category']); ?></p>
+      <?php if (!empty($event['notes'])): ?>
       <div class="pinned-note">
-        <p class="pinned-note-text"><?php echo htmlspecialchars($event['note']); ?></p>
+        <p class="pinned-note-text"><?php echo htmlspecialchars($event['notes']); ?></p>
       </div>
+      <?php endif; ?>
     </div>
   </div>
   <?php endforeach; ?>
 
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<?php endif; ?>

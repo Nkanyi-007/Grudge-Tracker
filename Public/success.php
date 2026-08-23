@@ -1,35 +1,64 @@
 <?php
+require 'includes/db.php';
 $pageTitle = "Success — Grudge Tracker";
 include 'includes/header.php';
 
-// Dummy data for now — will be replaced with real DB values later
-$level = 42;
-$xpCurrent = 640;
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$userId = $_SESSION['user_id'];
+
+// Real level/XP from the users table
+$userStmt = $pdo->prepare("SELECT xp, level FROM users WHERE id = ?");
+$userStmt->execute([$userId]);
+$userRow = $userStmt->fetch();
+
+$level = $userRow['level'];
+$xpCurrent = $userRow['xp'];
 $xpTotal = 1000;
 $xpPercent = round(($xpCurrent / $xpTotal) * 100);
 
-$targetsAdded = 17;
-$disputesFiled = 8;
-$grudgesResolved = 5;
+// Real progress stats
+$targetsAddedStmt = $pdo->prepare("SELECT COUNT(DISTINCT person_involved) as count FROM grudges WHERE user_id = ?");
+$targetsAddedStmt->execute([$userId]);
+$targetsAdded = $targetsAddedStmt->fetch()['count'];
 
-$active = 6;
-$inProgress = 5;
-$resolved = 12;
-$archived = 1;
+$disputesFiledStmt = $pdo->prepare("SELECT COUNT(*) as count FROM disputes WHERE filed_by = ?");
+$disputesFiledStmt->execute([$userId]);
+$disputesFiled = $disputesFiledStmt->fetch()['count'];
+
+$grudgesResolvedStmt = $pdo->prepare("SELECT COUNT(*) as count FROM grudges WHERE user_id = ? AND status = 'Resolved'");
+$grudgesResolvedStmt->execute([$userId]);
+$grudgesResolved = $grudgesResolvedStmt->fetch()['count'];
+
+// Real grudge summary counts for the donut chart
+$statusStmt = $pdo->prepare("SELECT status, COUNT(*) as count FROM grudges WHERE user_id = ? GROUP BY status");
+$statusStmt->execute([$userId]);
+$statusCounts = ['Active' => 0, 'In Progress' => 0, 'Resolved' => 0, 'Archived' => 0];
+foreach ($statusStmt->fetchAll() as $row) {
+    $statusCounts[$row['status']] = (int) $row['count'];
+}
+
+$active = $statusCounts['Active'];
+$inProgress = $statusCounts['In Progress'];
+$resolved = $statusCounts['Resolved'];
+$archived = $statusCounts['Archived'];
 $totalGrudges = $active + $inProgress + $resolved + $archived;
 
 $circumference = 2 * M_PI * 42;
-$activeLen = ($active / $totalGrudges) * $circumference;
-$inProgressLen = ($inProgress / $totalGrudges) * $circumference;
-$resolvedLen = ($resolved / $totalGrudges) * $circumference;
-$archivedLen = ($archived / $totalGrudges) * $circumference;
+$safeTotal = $totalGrudges > 0 ? $totalGrudges : 1;
+$activeLen = ($active / $safeTotal) * $circumference;
+$inProgressLen = ($inProgress / $safeTotal) * $circumference;
+$resolvedLen = ($resolved / $safeTotal) * $circumference;
+$archivedLen = ($archived / $safeTotal) * $circumference;
 ?>
 
 <div class="success-page">
 
   <div class="success-columns">
 
-    <!-- Main success panel -->
     <div class="evidence-card success-main-card">
       <div class="success-heading-row">
         <div>
@@ -41,26 +70,26 @@ $archivedLen = ($archived / $totalGrudges) * $circumference;
       </div>
 
       <div class="what-you-did">
-        <h2 class="card-heading-sm">WHAT YOU JUST DID</h2>
+        <h2 class="card-heading-sm">WHAT YOU'VE DONE SO FAR</h2>
         <div class="did-grid">
           <div class="did-item">
             <span class="did-icon did-icon-green">✓</span>
-            <p class="did-title">YOU RESOLVED</p>
-            <p class="did-sub">Handled it with maturity.</p>
+            <p class="did-title">RESOLVED</p>
+            <p class="did-sub"><?php echo $grudgesResolved; ?> grudge<?php echo $grudgesResolved === 1 ? '' : 's'; ?> closed.</p>
           </div>
           <div class="did-item">
             <span class="did-icon did-icon-pink">♥</span>
-            <p class="did-title">YOU HEALED</p>
-            <p class="did-sub">You broke the cycle.</p>
+            <p class="did-title">LOGGED</p>
+            <p class="did-sub"><?php echo $totalGrudges; ?> total grudge<?php echo $totalGrudges === 1 ? '' : 's'; ?>.</p>
           </div>
           <div class="did-item">
             <span class="did-icon did-icon-yellow">▦</span>
-            <p class="did-title">YOU MOVED FORWARD</p>
-            <p class="did-sub">You didn't forget, you released.</p>
+            <p class="did-title">DISPUTED</p>
+            <p class="did-sub"><?php echo $disputesFiled; ?> case<?php echo $disputesFiled === 1 ? '' : 's'; ?> filed.</p>
           </div>
           <div class="did-item">
             <span class="did-icon did-icon-orange">♛</span>
-            <p class="did-title">YOU WON</p>
+            <p class="did-title">LEVEL <?php echo $level; ?></p>
             <p class="did-sub">That's how leaders level up.</p>
           </div>
         </div>
@@ -68,11 +97,9 @@ $archivedLen = ($archived / $totalGrudges) * $circumference;
 
       <div class="success-quote">
         <p class="quote-text">"Not everything needs revenge. Growth hits different."</p>
-        <p class="quote-author">— PETTY PRINCE</p>
       </div>
     </div>
 
-    <!-- Sidebar -->
     <div class="success-side-col">
 
       <div class="evidence-card summary-card-sm">
@@ -136,7 +163,6 @@ $archivedLen = ($archived / $totalGrudges) * $circumference;
     </div>
   </div>
 
-  <!-- Core principle strip -->
   <div class="principles-strip">
     <div class="principle-card principle-pink">
       <span class="principle-num">01</span>

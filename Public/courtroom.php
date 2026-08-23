@@ -1,44 +1,65 @@
 <?php
+require 'includes/db.php';
 $pageTitle = "Dispute Courtroom — Grudge Tracker";
 include 'includes/header.php';
 
-// Dummy case data for now — will be replaced with a real DB record later
-$case = [
-  "id" => "GRD-015",
-  "title" => "They broke my trust.",
-  "filedDate" => "May 15, 2024",
-  "status" => "In Session",
-  "severity" => "Critical",
-  "relationship" => "Friend",
-  "addedOn" => "May 15, 2024",
-  "lastUpdated" => "Today, 11:42 AM",
-  "evidenceCount" => 4,
-  "witnessCount" => 2,
-];
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 
-$claims = [
-  ["text" => "They shared my secret with others.", "date" => "May 15, 2024"],
-  ["text" => "Ignored me when I needed them.", "date" => "Apr 22, 2024"],
-  ["text" => "Talked behind my back.", "date" => "Mar 03, 2024"],
-];
+$userId = $_SESSION['user_id'];
 
-$defenses = [
-  ["text" => "I didn't share anything.", "date" => "May 16, 2024"],
-  ["text" => "I was dealing with my own stuff.", "date" => "Apr 23, 2024"],
-  ["text" => "That's not what happened.", "date" => "Mar 04, 2024"],
-];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['claim_content'])) {
+    $disputeId = $_POST['dispute_id'];
+    $side = $_POST['side'];
+    $content = trim($_POST['claim_content']);
 
-$jurors = [
-  ["name" => "Juror #1", "vote" => "valid"],
-  ["name" => "Juror #2", "vote" => "valid"],
-  ["name" => "Juror #3", "vote" => "not-valid"],
-  ["name" => "Juror #4", "vote" => "pending"],
-  ["name" => "Juror #5", "vote" => "valid"],
-  ["name" => "Juror #6", "vote" => "pending"],
-];
-$validCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'valid'));
-$notValidCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'not-valid'));
-$pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'));
+    if (!empty($content)) {
+        $claimStmt = $pdo->prepare("INSERT INTO dispute_claims (dispute_id, submitted_by, side, content) VALUES (?, ?, ?, ?)");
+        $claimStmt->execute([$disputeId, $userId, $side, $content]);
+
+        // If new prosecution evidence was added, notify the defendant
+        if ($side === 'Prosecution') {
+            $defStmt = $pdo->prepare("SELECT defendant_id FROM disputes WHERE id = ?");
+            $defStmt->execute([$disputeId]);
+            $defendantId = $defStmt->fetch()['defendant_id'];
+
+            if ($defendantId) {
+                $notifyStmt = $pdo->prepare("INSERT INTO notifications (user_id, dispute_id, type, message) VALUES (?, ?, 'new_evidence', ?)");
+                $notifyStmt->execute([$defendantId, $disputeId, "New evidence was submitted against you on Case #$disputeId."]);
+            }
+        }
+    }
+
+    header("Location: courtroom.php?dispute_id=" . $disputeId);
+    exit;
+}
+
+$disputeId = $_GET['dispute_id'] ?? null;
+
+if ($disputeId) {
+    $disputeStmt = $pdo->prepare("
+        SELECT d.*, g.title AS grudge_title, g.severity, g.person_involved, g.category, g.date_occurred
+        FROM disputes d
+        JOIN grudges g ON g.id = d.grudge_id
+        WHERE d.id = ?
+    ");
+    $disputeStmt->execute([$disputeId]);
+} else {
+    $disputeStmt = $pdo->prepare("
+        SELECT d.*, g.title AS grudge_title, g.severity, g.person_involved, g.category, g.date_occurred
+        FROM disputes d
+        JOIN grudges g ON g.id = d.grudge_id
+        LEFT JOIN dispute_jurors dj ON dj.dispute_id = d.id AND dj.user_id = ?
+        WHERE d.filed_by = ? OR d.defendant_id = ? OR dj.user_id = ?
+        ORDER BY d.created_at DESC
+        LIMIT 1
+    ");
+    $disputeStmt->execute([$userId, $userId, $userId, $userId]);
+}
+
+$dispute = $disputeStmt->fetch();
 ?>
 
 <div class="dashboard-top">
@@ -46,106 +67,161 @@ $pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'))
     <h1 class="graffiti-heading heading-orange-pink">DISPUTE COURTROOM</h1>
     <p class="auth-subtext">Present your case. Defend your record. Let the truth be judged.</p>
   </div>
-  <a href="#" class="btn-sticker btn-pink btn-small">+ FILE A DISPUTE</a>
+  <a href="file-dispute.php" class="btn-sticker btn-pink btn-small">+ FILE A DISPUTE</a>
 </div>
+
+<?php if (!$dispute): ?>
+
+  <p class="no-results">No disputes yet. File one, or wait to be called for jury duty.</p>
+
+<?php else: ?>
+
+<?php
+$disputeId = $dispute['id'];
+$isFiler = ($dispute['filed_by'] == $userId);
+$isDefendant = ($dispute['defendant_id'] == $userId);
+
+$claimsStmt = $pdo->prepare("SELECT * FROM dispute_claims WHERE dispute_id = ? AND side = 'Prosecution' ORDER BY created_at ASC");
+$claimsStmt->execute([$disputeId]);
+$claims = $claimsStmt->fetchAll();
+
+$defensesStmt = $pdo->prepare("SELECT * FROM dispute_claims WHERE dispute_id = ? AND side = 'Defense' ORDER BY created_at ASC");
+$defensesStmt->execute([$disputeId]);
+$defenses = $defensesStmt->fetchAll();
+
+$jurorsStmt = $pdo->prepare("
+    SELECT u.username, jv.vote
+    FROM dispute_jurors dj
+    JOIN users u ON u.id = dj.user_id
+    LEFT JOIN jury_votes jv ON jv.dispute_id = dj.dispute_id AND jv.juror_id = dj.user_id
+    WHERE dj.dispute_id = ?
+");
+$jurorsStmt->execute([$disputeId]);
+$jurors = $jurorsStmt->fetchAll();
+
+$guiltyCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'Guilty'));
+$innocentCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'Innocent'));
+$pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === null));
+
+$isJurorStmt = $pdo->prepare("SELECT id FROM dispute_jurors WHERE dispute_id = ? AND user_id = ?");
+$isJurorStmt->execute([$disputeId, $userId]);
+$isJuror = (bool) $isJurorStmt->fetch();
+
+$hasVotedStmt = $pdo->prepare("SELECT id FROM jury_votes WHERE dispute_id = ? AND juror_id = ?");
+$hasVotedStmt->execute([$disputeId, $userId]);
+$hasVoted = (bool) $hasVotedStmt->fetch();
+?>
 
 <div class="courtroom-columns">
 
-  <!-- Main courtroom area -->
   <div class="courtroom-main">
 
-    <!-- Case header strip -->
     <div class="evidence-card case-header-card">
       <div class="tape tape-left"></div>
       <div class="tape tape-right"></div>
       <div class="case-header-row">
-        <span class="case-id-tag">CASE #<?php echo $case['id']; ?></span>
+        <span class="case-id-tag">CASE #<?php echo $dispute['id']; ?></span>
         <div class="case-title-block">
-          <p class="case-title"><?php echo strtoupper($case['title']); ?></p>
-          <p class="case-filed">Filed on <?php echo $case['filedDate']; ?></p>
+          <p class="case-title"><?php echo strtoupper(htmlspecialchars($dispute['grudge_title'])); ?></p>
+          <p class="case-filed">Filed on <?php echo date('M j, Y', strtotime($dispute['created_at'])); ?></p>
         </div>
         <div class="case-status-block">
           <p class="case-status-label">STATUS</p>
-          <p class="case-status-value">IN SESSION →</p>
+          <p class="case-status-value"><?php echo strtoupper($dispute['status']); ?></p>
         </div>
       </div>
     </div>
 
-    <!-- Prosecution / Judge / Defense -->
     <div class="courtroom-grid">
 
       <div class="evidence-card court-side prosecution-side">
-        <h2 class="court-side-heading heading-pink">PROSECUTION (YOU)</h2>
-        <p class="court-side-subheading">Your Claims</p>
+        <h2 class="court-side-heading heading-pink">PROSECUTION</h2>
+        <p class="court-side-subheading">Claims</p>
         <ul class="claim-list">
+          <?php if (count($claims) === 0): ?>
+          <li class="claim-item"><p class="claim-text">No claims filed yet.</p></li>
+          <?php endif; ?>
           <?php foreach ($claims as $claim): ?>
           <li class="claim-item">
-            <p class="claim-text"><?php echo htmlspecialchars($claim['text']); ?></p>
-            <p class="claim-date"><?php echo $claim['date']; ?></p>
+            <p class="claim-text"><?php echo htmlspecialchars($claim['content']); ?></p>
+            <p class="claim-date"><?php echo date('M j, Y', strtotime($claim['created_at'])); ?></p>
           </li>
           <?php endforeach; ?>
         </ul>
-        <button type="button" class="btn-outline btn-outline-pink">+ ADD EVIDENCE</button>
+
+        <?php if ($isFiler): ?>
+          <button type="button" class="btn-outline btn-outline-pink" onclick="toggleForm('addClaimForm')">+ ADD EVIDENCE</button>
+          <form action="courtroom.php" method="POST" class="inline-claim-form" id="addClaimForm" style="display:none; margin-top: 0.8rem;">
+            <input type="hidden" name="dispute_id" value="<?php echo $disputeId; ?>">
+            <input type="hidden" name="side" value="Prosecution">
+            <textarea name="claim_content" rows="2" placeholder="Add another claim..." required></textarea>
+            <button type="submit" class="btn-sticker btn-pink btn-small" style="margin-top: 0.5rem;">Submit</button>
+          </form>
+        <?php endif; ?>
       </div>
 
       <div class="evidence-card court-side judge-side">
-        <h2 class="court-side-heading">THE JUDGE</h2>
+        <h2 class="court-side-heading">THE JURY</h2>
         <div class="judge-icon">⚖️</div>
-        <p class="judge-verdict-label">JUDGE'S VERDICT</p>
-        <p class="judge-verdict-text">The evidence is under review. Both sides will be heard.</p>
-
-        <div class="verdict-slider">
-          <span class="verdict-label-left">NOT VALID</span>
-          <div class="verdict-track">
-            <div class="verdict-dot"></div>
-          </div>
-          <span class="verdict-label-right">FULLY VALID</span>
-        </div>
-        <p class="verdict-pending">PENDING</p>
+        <p class="judge-verdict-label">VERDICT</p>
+        <p class="judge-verdict-text">
+          <?php echo $dispute['verdict'] === 'Pending' ? 'Awaiting jury votes.' : strtoupper($dispute['verdict']); ?>
+        </p>
       </div>
 
       <div class="evidence-card court-side defense-side">
-        <h2 class="court-side-heading heading-orange">DEFENDANT (THEM)</h2>
-        <p class="court-side-subheading">Their Defense</p>
+        <h2 class="court-side-heading heading-orange">DEFENSE</h2>
+        <p class="court-side-subheading">Responses</p>
         <ul class="claim-list">
+          <?php if (count($defenses) === 0): ?>
+          <li class="claim-item"><p class="claim-text">No response yet.</p></li>
+          <?php endif; ?>
           <?php foreach ($defenses as $defense): ?>
           <li class="claim-item">
-            <p class="claim-text"><?php echo htmlspecialchars($defense['text']); ?></p>
-            <p class="claim-date"><?php echo $defense['date']; ?></p>
+            <p class="claim-text"><?php echo htmlspecialchars($defense['content']); ?></p>
+            <p class="claim-date"><?php echo date('M j, Y', strtotime($defense['created_at'])); ?></p>
           </li>
           <?php endforeach; ?>
         </ul>
-        <button type="button" class="btn-outline btn-outline-orange">+ ADD RESPONSE</button>
+
+        <?php if ($isDefendant): ?>
+          <button type="button" class="btn-outline btn-outline-orange" onclick="toggleForm('addDefenseForm')">+ ADD RESPONSE</button>
+          <form action="courtroom.php" method="POST" class="inline-claim-form" id="addDefenseForm" style="display:none; margin-top: 0.8rem;">
+            <input type="hidden" name="dispute_id" value="<?php echo $disputeId; ?>">
+            <input type="hidden" name="side" value="Defense">
+            <textarea name="claim_content" rows="2" placeholder="Respond to the claim..." required></textarea>
+            <button type="submit" class="btn-sticker btn-pink btn-small" style="margin-top: 0.5rem;">Submit</button>
+          </form>
+        <?php endif; ?>
       </div>
 
     </div>
 
-    <!-- Jury Panel -->
     <div class="evidence-card jury-panel-card">
-      <h2 class="card-heading">THE JURY HAS SPOKEN (SORT OF)</h2>
-      <p class="auth-subtext">6 jurors. Their word isn't final, but it counts.</p>
+      <h2 class="card-heading">THE JURY</h2>
+      <p class="auth-subtext"><?php echo count($jurors); ?> jurors invited. Their word decides the case.</p>
 
       <div class="jury-grid">
         <?php foreach ($jurors as $juror): ?>
-        <div class="juror-chip juror-<?php echo $juror['vote']; ?>">
-          <span class="juror-icon">
-            <?php
-              echo $juror['vote'] === 'valid' ? '✓' : ($juror['vote'] === 'not-valid' ? '✗' : '…');
-            ?>
-          </span>
-          <span class="juror-name"><?php echo $juror['name']; ?></span>
+        <?php
+          $voteClass = $juror['vote'] === 'Guilty' ? 'not-valid' : ($juror['vote'] === 'Innocent' ? 'valid' : 'pending');
+          $voteIcon = $juror['vote'] === 'Guilty' ? '✗' : ($juror['vote'] === 'Innocent' ? '✓' : '…');
+        ?>
+        <div class="juror-chip juror-<?php echo $voteClass; ?>">
+          <span class="juror-icon"><?php echo $voteIcon; ?></span>
+          <span class="juror-name"><?php echo htmlspecialchars($juror['username']); ?></span>
         </div>
         <?php endforeach; ?>
       </div>
 
       <div class="jury-tally">
         <div class="tally-item">
-          <span class="tally-count tally-green"><?php echo $validCount; ?></span>
-          <span class="tally-label">VALID</span>
+          <span class="tally-count tally-green"><?php echo $innocentCount; ?></span>
+          <span class="tally-label">INNOCENT</span>
         </div>
         <div class="tally-item">
-          <span class="tally-count tally-pink"><?php echo $notValidCount; ?></span>
-          <span class="tally-label">NOT VALID</span>
+          <span class="tally-count tally-pink"><?php echo $guiltyCount; ?></span>
+          <span class="tally-label">GUILTY</span>
         </div>
         <div class="tally-item">
           <span class="tally-count tally-grey"><?php echo $pendingCount; ?></span>
@@ -153,35 +229,26 @@ $pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'))
         </div>
       </div>
 
-      <button type="button" class="btn-outline btn-outline-pink btn-full-outline" onclick="openVerdictModal()">CAST YOUR VOTE</button>
-
-    <!-- Court action buttons -->
-    <div class="evidence-card court-actions-card">
-      <h2 class="card-heading">WHAT SHOULD THE COURT DO?</h2>
-      <div class="court-actions-grid">
-        <button type="button" class="court-action-btn action-pink">RULE IN YOUR FAVOR</button>
-        <button type="button" class="court-action-btn action-orange">NEUTRAL RULING</button>
-        <button type="button" class="court-action-btn action-yellow">REQUEST MORE EVIDENCE</button>
-        <button type="button" class="court-action-btn action-grey">DISMISS CASE</button>
-      </div>
+      <?php if (!$isJuror): ?>
+        <p class="auth-subtext">You weren't invited to serve on this jury.</p>
+      <?php elseif ($hasVoted): ?>
+        <p class="auth-subtext">You've already cast your vote on this case.</p>
+      <?php else: ?>
+        <a href="verdict.php?dispute_id=<?php echo $disputeId; ?>" class="btn-outline btn-outline-pink btn-full-outline" style="display:block; text-align:center; text-decoration:none;">CAST YOUR VOTE</a>
+      <?php endif; ?>
     </div>
 
   </div>
 
-  <!-- Sidebar -->
   <div class="courtroom-side">
-
     <div class="evidence-card case-summary-card">
       <h2 class="card-heading">CASE SUMMARY</h2>
       <ul class="summary-list">
-        <li><span class="summary-label">SEVERITY</span><span class="summary-value severity-tag severity-critical"><?php echo strtoupper($case['severity']); ?></span></li>
-        <li><span class="summary-label">RELATIONSHIP</span><span class="summary-value"><?php echo $case['relationship']; ?></span></li>
-        <li><span class="summary-label">ADDED ON</span><span class="summary-value"><?php echo $case['addedOn']; ?></span></li>
-        <li><span class="summary-label">LAST UPDATED</span><span class="summary-value"><?php echo $case['lastUpdated']; ?></span></li>
-        <li><span class="summary-label">EVIDENCE</span><span class="summary-value"><?php echo $case['evidenceCount']; ?> items</span></li>
-        <li><span class="summary-label">WITNESSES</span><span class="summary-value"><?php echo $case['witnessCount']; ?></span></li>
+        <li><span class="summary-label">SEVERITY</span><span class="summary-value severity-tag severity-<?php echo strtolower($dispute['severity']); ?>"><?php echo strtoupper($dispute['severity']); ?></span></li>
+        <li><span class="summary-label">PERSON</span><span class="summary-value"><?php echo htmlspecialchars($dispute['person_involved']); ?></span></li>
+        <li><span class="summary-label">CATEGORY</span><span class="summary-value"><?php echo htmlspecialchars($dispute['category']); ?></span></li>
+        <li><span class="summary-label">GRUDGE DATE</span><span class="summary-value"><?php echo date('M j, Y', strtotime($dispute['date_occurred'])); ?></span></li>
       </ul>
-      <a href="#" class="btn-sticker btn-pink btn-full">VIEW FULL DETAILS →</a>
     </div>
 
     <div class="evidence-card court-rules-card">
@@ -193,49 +260,10 @@ $pendingCount = count(array_filter($jurors, fn($j) => $j['vote'] === 'pending'))
         <li><p class="rule-title">Verdict is final.</p><p class="rule-sub">Move on or hold it.</p></li>
       </ul>
     </div>
-
-    <div class="evidence-card past-data-card">
-      <p class="past-data-text">PAST ISN'T PAST.<br>IT'S DATA.</p>
-    </div>
-
   </div>
 
 </div>
 
-<!-- Jury Verdict Modal -->
-<div class="verdict-modal-overlay" id="verdictModalOverlay">
-  <div class="evidence-card verdict-modal">
-    <div class="tape tape-left"></div>
-    <div class="tape tape-right"></div>
-    <button type="button" class="modal-close" onclick="closeVerdictModal()">✕</button>
-
-    <h2 class="verdict-modal-heading">CAST YOUR VERDICT</h2>
-    <p class="auth-subtext">Case #GRD-015 — They broke my trust.</p>
-
-    <p class="verdict-modal-question">Based on the evidence, how do you find the defendant?</p>
-
-    <div class="verdict-choice-grid">
-      <button type="button" class="verdict-choice-btn choice-guilty" onclick="selectVerdict('guilty')">
-        <span class="verdict-choice-label">GUILTY</span>
-        <span class="verdict-choice-sub">The claims hold up.</span>
-      </button>
-
-      <button type="button" class="verdict-choice-btn choice-innocent" onclick="selectVerdict('innocent')">
-        <span class="verdict-choice-label">INNOCENT</span>
-        <span class="verdict-choice-sub">Not enough evidence.</span>
-      </button>
-    </div>
-
-    <div class="verdict-reasoning-group">
-      <label for="verdictReasoning">WHY? (OPTIONAL)</label>
-      <textarea id="verdictReasoning" rows="2" placeholder="Explain your reasoning to the court..."></textarea>
-    </div>
-
-    <button type="button" class="btn-sticker btn-submit-verdict" onclick="submitVerdict()">SUBMIT VERDICT</button>
-    <p class="verdict-confirm-msg" id="verdictConfirmMsg"></p>
-  </div>
-</div>
-
-<?php include 'includes/footer.php'; ?>
+<?php endif; ?>
 
 <?php include 'includes/footer.php'; ?>

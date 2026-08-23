@@ -1,32 +1,68 @@
 <?php
+require 'includes/db.php';
+
 $pageTitle = "Profile — Grudge Tracker";
 include 'includes/header.php';
 
-// Dummy data for now — will be replaced with real DB values later
-$username = "PETTY PRINCE";
-$level = 42;
-$trustScore = 62;
-$favouriteEmoji = "😤";
-$currentStreak = 3;
-$totalGrudges = 24;
-$resolved = 12;
-$disputesWon = 6;
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
 
-$achievements = [
-  ["icon" => "🏆", "title" => "First Blood", "desc" => "Logged your first grudge", "unlocked" => true],
-  ["icon" => "⚖️", "title" => "Day in Court", "desc" => "Filed your first dispute", "unlocked" => true],
-  ["icon" => "🔥", "title" => "On a Streak", "desc" => "3-day logging streak", "unlocked" => true],
-  ["icon" => "🕊️", "title" => "Let It Go", "desc" => "Resolved 10 grudges", "unlocked" => true],
-  ["icon" => "👑", "title" => "Petty Royalty", "desc" => "Reached Level 40", "unlocked" => true],
-  ["icon" => "🛡️", "title" => "Trusted", "desc" => "Reach 80 trust score", "unlocked" => false],
-];
+$userId = $_SESSION['user_id'];
 
-$recentActivity = [
-  ["text" => "Filed a dispute against \"Took credit for my idea\"", "time" => "2 hours ago"],
-  ["text" => "Resolved \"Never returned my charger\"", "time" => "3 days ago"],
-  ["text" => "Logged a new grudge: \"Loud music at 2am\"", "time" => "5 days ago"],
-  ["text" => "Reached Level 42", "time" => "1 week ago"],
-];
+// Core user data
+$userStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$userStmt->execute([$userId]);
+$user = $userStmt->fetch();
+
+$username = $user['username'];
+$level = $user['level'];
+$trustScore = $user['trust_score'];
+$currentStreak = $user['streak_count'];
+
+// Stats
+$totalStmt = $pdo->prepare("SELECT COUNT(*) as count FROM grudges WHERE user_id = ?");
+$totalStmt->execute([$userId]);
+$totalGrudges = $totalStmt->fetch()['count'];
+
+$resolvedStmt = $pdo->prepare("SELECT COUNT(*) as count FROM grudges WHERE user_id = ? AND status = 'Resolved'");
+$resolvedStmt->execute([$userId]);
+$resolved = $resolvedStmt->fetch()['count'];
+
+$disputesWonStmt = $pdo->prepare("SELECT COUNT(*) as count FROM disputes WHERE filed_by = ? AND verdict = 'Guilty'");
+$disputesWonStmt->execute([$userId]);
+$disputesWon = $disputesWonStmt->fetch()['count'];
+
+// Favourite emoji — whichever emoji appears most often across this user's grudges
+$emojiStmt = $pdo->prepare("SELECT emoji, COUNT(*) as count FROM grudges WHERE user_id = ? AND emoji IS NOT NULL GROUP BY emoji ORDER BY count DESC LIMIT 1");
+$emojiStmt->execute([$userId]);
+$emojiRow = $emojiStmt->fetch();
+$favouriteEmoji = $emojiRow ? $emojiRow['emoji'] : '—';
+
+// Achievements — all master achievements, marked unlocked if this user has them
+$achievementsStmt = $pdo->prepare("
+    SELECT a.*, ua.unlocked_at
+    FROM achievements a
+    LEFT JOIN user_achievements ua ON ua.achievement_id = a.id AND ua.user_id = ?
+    ORDER BY a.id ASC
+");
+$achievementsStmt->execute([$userId]);
+$achievements = $achievementsStmt->fetchAll();
+
+// Recent activity — most recent grudges logged, as a simple activity feed
+$activityStmt = $pdo->prepare("SELECT title, created_at FROM grudges WHERE user_id = ? ORDER BY created_at DESC LIMIT 4");
+$activityStmt->execute([$userId]);
+$recentActivity = $activityStmt->fetchAll();
+
+// Helper to turn a timestamp into "X hours ago" style text
+function timeAgo($datetime) {
+    $diff = time() - strtotime($datetime);
+    if ($diff < 3600) return floor($diff / 60) . " minutes ago";
+    if ($diff < 86400) return floor($diff / 3600) . " hours ago";
+    if ($diff < 604800) return floor($diff / 86400) . " days ago";
+    return floor($diff / 604800) . " weeks ago";
+}
 ?>
 
 <div class="dashboard-top">
@@ -39,7 +75,7 @@ $recentActivity = [
   <div class="evidence-card profile-identity-card">
     <div class="tape tape-left"></div>
     <div class="profile-avatar">👑</div>
-    <h2 class="profile-username"><?php echo $username; ?></h2>
+    <h2 class="profile-username"><?php echo htmlspecialchars($username); ?></h2>
     <p class="profile-level">LEVEL <?php echo $level; ?></p>
 
     <div class="trust-meter">
@@ -84,10 +120,11 @@ $recentActivity = [
       <h2 class="card-heading">ACHIEVEMENTS</h2>
       <div class="achievements-grid">
         <?php foreach ($achievements as $a): ?>
-        <div class="achievement-badge <?php echo $a['unlocked'] ? 'unlocked' : 'locked'; ?>">
-          <span class="achievement-icon"><?php echo $a['unlocked'] ? $a['icon'] : '🔒'; ?></span>
-          <p class="achievement-title"><?php echo $a['title']; ?></p>
-          <p class="achievement-desc"><?php echo $a['desc']; ?></p>
+        <?php $unlocked = !empty($a['unlocked_at']); ?>
+        <div class="achievement-badge <?php echo $unlocked ? 'unlocked' : 'locked'; ?>">
+          <span class="achievement-icon"><?php echo $unlocked ? $a['icon'] : '🔒'; ?></span>
+          <p class="achievement-title"><?php echo htmlspecialchars($a['title']); ?></p>
+          <p class="achievement-desc"><?php echo htmlspecialchars($a['description']); ?></p>
         </div>
         <?php endforeach; ?>
       </div>
@@ -98,14 +135,18 @@ $recentActivity = [
   <!-- Right: recent activity -->
   <div class="evidence-card profile-activity-card">
     <h2 class="card-heading">RECENT ACTIVITY</h2>
+    <?php if (count($recentActivity) === 0): ?>
+      <p class="activity-text">No activity yet. Go log something.</p>
+    <?php else: ?>
     <ul class="activity-list">
       <?php foreach ($recentActivity as $activity): ?>
       <li class="activity-item">
-        <p class="activity-text"><?php echo htmlspecialchars($activity['text']); ?></p>
-        <p class="activity-time"><?php echo $activity['time']; ?></p>
+        <p class="activity-text">Logged a new grudge: "<?php echo htmlspecialchars($activity['title']); ?>"</p>
+        <p class="activity-time"><?php echo timeAgo($activity['created_at']); ?></p>
       </li>
       <?php endforeach; ?>
     </ul>
+    <?php endif; ?>
   </div>
 
 </div>

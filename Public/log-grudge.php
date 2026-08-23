@@ -1,10 +1,14 @@
 <?php
 require 'includes/db.php';
+require_once 'includes/achievements.php';
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
+// require 'includes/db.php';
+
 
 $pageTitle = "Log a Grudge — Grudge Tracker";
 include 'includes/header.php';
 
-// Protect this page — must be logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -29,19 +33,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$userId, $title, $person, $category, $severity, $emoji, $notes, $dateOccurred]);
         $grudgeId = $pdo->lastInsertId();
 
-        // Handle evidence uploads, if any were provided
         if (!empty($_FILES['evidence']['name'][0])) {
             $uploadDir = 'uploads/evidence/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
-
             foreach ($_FILES['evidence']['name'] as $index => $fileName) {
                 if ($_FILES['evidence']['error'][$index] === 0) {
                     $tmpPath = $_FILES['evidence']['tmp_name'][$index];
                     $safeName = time() . '_' . basename($fileName);
                     $destination = $uploadDir . $safeName;
-
                     if (move_uploaded_file($tmpPath, $destination)) {
                         $evidenceStmt = $pdo->prepare("INSERT INTO grudge_evidence (grudge_id, file_path) VALUES (?, ?)");
                         $evidenceStmt->execute([$grudgeId, $destination]);
@@ -49,6 +50,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        $xpGain = 50;
+        $userStmt = $pdo->prepare("SELECT xp, level FROM users WHERE id = ?");
+        $userStmt->execute([$userId]);
+        $userRow = $userStmt->fetch();
+
+        $newXp = $userRow['xp'] + $xpGain;
+        $newLevel = $userRow['level'];
+        while ($newXp >= 1000) {
+            $newXp -= 1000;
+            $newLevel++;
+        }
+
+        $updateStmt = $pdo->prepare("UPDATE users SET xp = ?, level = ? WHERE id = ?");
+        $updateStmt->execute([$newXp, $newLevel, $userId]);
+
+        checkAchievements($pdo, $userId);
 
         header("Location: all-grudges.php");
         exit;

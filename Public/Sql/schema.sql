@@ -159,7 +159,7 @@ CREATE TABLE dispute_jurors (
 -- 9. JURY VOTES
 -- The application layer checks dispute_jurors before allowing
 -- an insert here, since MySQL alone can't enforce
--- "must also exist in a different pair-table" as a constraint.
+-- (must also exist in a different pair-table) as a constraint.
 -- ============================================================
 CREATE TABLE jury_votes (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -207,7 +207,7 @@ CREATE TABLE user_achievements (
 
 -- ============================================================
 -- 12. UNDO LOG
--- "One Undo, Ever." Stores the previous state of the user's
+-- One Undo, Ever. Stores the previous state of the user's
 -- most recent reversible action (as JSON) so it can be
 -- restored exactly once, then never again.
 -- ============================================================
@@ -226,7 +226,7 @@ CREATE TABLE undo_log (
 
 -- ============================================================
 -- 13. PASSWORD RESETS
--- Supports the Forgot Password page.
+-- helps with passwrd resets 
 -- ============================================================
 CREATE TABLE password_resets (
   id INT AUTO_INCREMENT PRIMARY KEY,

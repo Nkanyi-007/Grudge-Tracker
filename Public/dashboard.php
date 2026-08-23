@@ -1,33 +1,67 @@
 <?php
-// session_start();
+require 'includes/db.php';
 $pageTitle = "Dashboard — Grudge Tracker";
 include 'includes/header.php';
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$userId = $_SESSION['user_id'];
 $username = $_SESSION['username'] ?? 'Guest';
-$level = 42;
-$xpCurrent = 640;
+
+// Get real level/XP from the database
+$userStmt = $pdo->prepare("SELECT xp, level FROM users WHERE id = ?");
+$userStmt->execute([$userId]);
+$userRow = $userStmt->fetch();
+
+$level = $userRow['level'];
+$xpCurrent = $userRow['xp'];
 $xpTotal = 1000;
 $xpPercent = round(($xpCurrent / $xpTotal) * 100);
 
-$active = 6;
-$inProgress = 5;
-$resolved = 12;
-$archived = 1;
+// Count grudges by status for the donut chart
+$statusStmt = $pdo->prepare("SELECT status, COUNT(*) as count FROM grudges WHERE user_id = ? GROUP BY status");
+$statusStmt->execute([$userId]);
+$statusCounts = ['Active' => 0, 'In Progress' => 0, 'Resolved' => 0, 'Archived' => 0];
+foreach ($statusStmt->fetchAll() as $row) {
+    $statusCounts[$row['status']] = (int) $row['count'];
+}
+
+$active = $statusCounts['Active'];
+$inProgress = $statusCounts['In Progress'];
+$resolved = $statusCounts['Resolved'];
+$archived = $statusCounts['Archived'];
 $totalGrudges = $active + $inProgress + $resolved + $archived;
 
-$recentGrudges = [
-  ["title" => "Ate my leftover pasta without asking", "category" => "Roommate", "severity" => "High", "date" => "Aug 4, 2026"],
-  ["title" => "Took credit for my idea in the meeting", "category" => "Work", "severity" => "Critical", "date" => "Aug 2, 2026"],
-  ["title" => "Never returned my charger", "category" => "Friend", "severity" => "Low", "date" => "Jul 30, 2026"],
-];
+// Pull the 3 most recent grudges
+$recentStmt = $pdo->prepare("SELECT * FROM grudges WHERE user_id = ? ORDER BY date_occurred DESC LIMIT 3");
+$recentStmt->execute([$userId]);
+$recentGrudges = $recentStmt->fetchAll();
+
+// Unread notifications for the banner
+$notifStmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC");
+$notifStmt->execute([$userId]);
+$notifications = $notifStmt->fetchAll();
 
 // Donut chart math (SVG stroke-dasharray based)
 $circumference = 2 * M_PI * 54; // radius 54
-$activeLen = ($active / $totalGrudges) * $circumference;
-$inProgressLen = ($inProgress / $totalGrudges) * $circumference;
-$resolvedLen = ($resolved / $totalGrudges) * $circumference;
-$archivedLen = ($archived / $totalGrudges) * $circumference;
+$safeTotal = $totalGrudges > 0 ? $totalGrudges : 1; // avoid divide-by-zero for new accounts
+$activeLen = ($active / $safeTotal) * $circumference;
+$inProgressLen = ($inProgress / $safeTotal) * $circumference;
+$resolvedLen = ($resolved / $safeTotal) * $circumference;
+$archivedLen = ($archived / $safeTotal) * $circumference;
 ?>
+
+<?php foreach ($notifications as $notif): ?>
+<div class="notification-banner">
+  <span class="notification-icon"><?php echo $notif['type'] === 'juror_invite' ? '⚖️' : '📢'; ?></span>
+  <span class="notification-text"><?php echo htmlspecialchars($notif['message']); ?></span>
+  <a href="courtroom.php?dispute_id=<?php echo $notif['dispute_id']; ?>" class="notification-link">View Case</a>
+  <a href="dismiss-notification.php?id=<?php echo $notif['id']; ?>" class="notification-close">✕</a>
+</div>
+<?php endforeach; ?>
 
 <div class="dashboard-top">
   <div>
@@ -45,15 +79,19 @@ $archivedLen = ($archived / $totalGrudges) * $circumference;
       <div class="tape tape-left"></div>
       <h2 class="card-heading">RECENT GRUDGES</h2>
       <ul class="recent-list">
+        <?php if (count($recentGrudges) === 0): ?>
+        <li class="recent-item"><p class="recent-meta">No grudges yet — go log one.</p></li>
+        <?php else: ?>
         <?php foreach ($recentGrudges as $grudge): ?>
         <li class="recent-item">
           <span class="severity-tag severity-<?php echo strtolower($grudge['severity']); ?>"><?php echo strtoupper($grudge['severity']); ?></span>
           <div class="recent-item-text">
             <p class="recent-title"><?php echo htmlspecialchars($grudge['title']); ?></p>
-            <p class="recent-meta"><?php echo $grudge['category']; ?> · <?php echo $grudge['date']; ?></p>
+            <p class="recent-meta"><?php echo htmlspecialchars($grudge['category']); ?> · <?php echo date('M j, Y', strtotime($grudge['date_occurred'])); ?></p>
           </div>
         </li>
         <?php endforeach; ?>
+        <?php endif; ?>
       </ul>
       <a href="all-grudges.php" class="view-all-link">View all grudges →</a>
     </div>

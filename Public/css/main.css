@@ -4,10 +4,133 @@
   --yellow: #FFD400;
   --green: #52FF6B;
   --cyan: #00D8C6;
-  --bg: #090909;
+  --bg: #ee1212;
   --card: #161616;
   --font-body: 'Manrope', 'Inter', sans-serif;
   --font-heading: 'Permanent Marker', cursive;
+}
+
+/* responsiveness */
+
+/* Tablet / smaller laptop windows */
+@media (max-width: 1200px) {
+  .dashboard-columns,
+  .courtroom-columns,
+  .profile-columns {
+    flex-direction: column;
+  }
+
+  .dashboard-main-col,
+  .dashboard-side-col,
+  .courtroom-main,
+  .courtroom-side,
+  .profile-main-col,
+  .profile-activity-card,
+  .profile-identity-card {
+    width: 100%;
+  }
+
+  .courtroom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .success-columns {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .success-page {
+    height: auto;
+  }
+
+  .principles-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .did-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .app-main {
+    padding: 2rem;
+  }
+}
+
+/* Narrower windows / small laptops */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 80px;
+    padding: 1.5rem 0.6rem;
+  }
+
+  .sidebar-logo .logo-text,
+  .sidebar-links a,
+  .sidebar-user p,
+  .xp-bar-mini,
+  .logout-link {
+    display: none;
+  }
+
+  .sidebar-links a {
+    text-align: center;
+    padding: 0.7rem 0.3rem;
+  }
+
+  .mascot-badge {
+    text-align: center;
+  }
+
+  .grudge-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  .achievements-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .court-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-top,
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .graffiti-heading {
+    font-size: 2rem;
+  }
+}
+
+/* Very narrow windows */
+@media (max-width: 600px) {
+  .app-main {
+    padding: 1.2rem;
+  }
+
+  .evidence-card {
+    padding: 1.5rem;
+    width: 100%;
+  }
+
+  .grudge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .achievements-grid,
+  .did-grid,
+  .court-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .courtroom-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1746,3 +1869,51 @@ body {
   transform: rotate(-1deg);
   margin-top: 0.5rem;
 }
+/* logout sequence */
+.logout-link {
+  display: block;
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #888;
+  text-decoration: none;
+  border-top: 1px solid #222;
+  padding-top: 0.8rem;
+}
+.logout-link:hover { color: var(--pink); }
+
+/* JURYS VERDICT PAGE  */
+.verdict-page-card {
+  width: 100%;
+  max-width: 520px;
+  margin: 2rem auto;
+  padding: 2.5rem;
+}
+
+/* Notifications banner styling  */
+.notification-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: rgba(255, 212, 0, 0.1);
+  border: 1px solid var(--yellow);
+  border-radius: 4px;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 1rem;
+}
+.notification-icon { font-size: 1.1rem; }
+.notification-text { flex: 1; font-size: 0.85rem; color: #eee; }
+.notification-link {
+  color: var(--cyan);
+  font-size: 0.8rem;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.notification-close {
+  color: #888;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.2rem 0.4rem;
+}
+.notification-close:hover { color: var(--pink); }
