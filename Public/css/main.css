@@ -108,7 +108,7 @@
   }
 }
 
-/* Very narrow windows */
+/*  narrow windows */
 @media (max-width: 600px) {
   .app-main {
     padding: 1.2rem;
@@ -166,7 +166,7 @@ body {
   letter-spacing: 1px;
 }
 
-/* ---------- APP SHELL / SIDEBAR ---------- */
+/* APP SHELL & SIDEBAR */
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -252,7 +252,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ---------- FOOTER ---------- */
+/* FOOTER  */
 .site-footer {
   text-align: center;
   padding: 1.5rem;
@@ -261,7 +261,7 @@ body {
   border-top: 1px solid #222;
 }
 
-/* ---------- AUTH / LOGIN / REGISTER PAGES ---------- */
+/*  AUTH / LOGIN / REGISTER PAGES  */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -366,7 +366,7 @@ body {
 }
 .auth-switch a { color: var(--cyan); text-decoration: none; }
 
-/* ---------- SHARED CARD HEADING ---------- */
+/*  SHARED CARD HEADING   */
 .card-heading {
   font-family: var(--font-heading);
   font-size: 1.3rem;
@@ -375,7 +375,7 @@ body {
   transform: rotate(-1deg);
 }
 
-/* ---------- RECENT GRUDGES LIST (shared) ---------- */
+/* GRUDGE LIST (UPDATED) */
 .recent-list { list-style: none; }
 .recent-item {
   display: flex;
@@ -410,7 +410,7 @@ body {
   font-size: 0.85rem;
 }
 
-/* ---------- DASHBOARD LAYOUT ---------- */
+/* DASHBOARD LAYOUT AND LOOK   */
 .dashboard-top {
   display: flex;
   justify-content: space-between;
@@ -463,7 +463,7 @@ body {
 .dot-yellow { background: var(--yellow); }
 .dot-grey { background: #666; }
 
-/* ---------- PROGRESS / XP CARD ---------- */
+/*  PROGRESS & XP CARD  */
 .progress-level {
   font-family: var(--font-heading);
   color: var(--green);
@@ -596,7 +596,7 @@ body {
   letter-spacing: 1px;
 }
 
-/* ---------- APP SHELL / SIDEBAR ---------- */
+/*  APP SHELL / SIDEBAR  */
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -668,7 +668,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ---------- FOOTER ---------- */
+/*  FOOTER  */
 .site-footer {
   text-align: center;
   padding: 1.5rem;
@@ -677,7 +677,7 @@ body {
   border-top: 1px solid #222;
 }
 
-/* ---------- AUTH / LOGIN / REGISTER PAGES ---------- */
+/*  AUTH / LOGIN / REGISTER PAGES */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -826,7 +826,7 @@ body {
   font-size: 0.85rem;
 }
 
-/* ---------- DASHBOARD LAYOUT ---------- */
+/* DASHBOARD LAYOUT  */
 .dashboard-top {
   display: flex;
   justify-content: space-between;
@@ -860,7 +860,7 @@ body {
   gap: 1.5rem;
 }
 
-/* ---------- GRUDGE SUMMARY DONUT ---------- */
+/* GRUDGE SUMMARY COUNTER GRAPH   */
 .donut-wrap { display: flex; align-items: center; gap: 1.5rem; }
 .donut-chart { width: 130px; height: 130px; }
 .donut-number { font-size: 22px; fill: #fff; font-family: var(--font-heading); }
@@ -876,7 +876,7 @@ body {
 .dot-yellow { background: var(--yellow); }
 .dot-grey { background: #666; }
 
-/* ---------- PROGRESS / XP CARD ---------- */
+/* PROGRESS / XP CARD  */
 .progress-level {
   font-family: var(--font-heading);
   color: var(--green);
@@ -894,7 +894,7 @@ body {
 .xp-bar-fill { height: 100%; background: var(--green); }
 .xp-label { margin-top: 0.5rem; font-size: 0.8rem; color: #888; }
 
-/* ---------- ALL GRUDGES PAGE ---------- */
+/* ALL GRUDGES PAGE  */
 .filters-bar {
   display: flex;
   gap: 1rem;
@@ -974,7 +974,7 @@ body {
   margin-top: 3rem;
 }
 
-/* ---------- LOG GRUDGE PAGE ---------- */
+/* LOG GRUDGE PAGE */
 .log-grudge-card {
   width: 100%;
   max-width: 720px;
@@ -1057,7 +1057,7 @@ body {
   box-shadow: 6px 6px 0 #99123f;
 }
 
-/* Order in the courtroom (gavel B*/
+/* Order in the courtroom (gavel goes BANG!!*/
 .courtroom-columns { display: flex; gap: 2rem; align-items: flex-start; }
 .courtroom-main { flex: 3; min-width: 0; display: flex; flex-direction: column; gap: 1.5rem; }
 .courtroom-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.5rem; }
@@ -1263,7 +1263,7 @@ body {
 .btn-full-outline { width: 100%; text-align: center; }
 
 
-/*  LOG GRUDGE PAGE */
+/*  LOG A GRUDGE PAGE */
 .log-grudge-card {
   width: 100%;
   max-width: 720px;
