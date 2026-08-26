@@ -11,8 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 $username = $_SESSION['username'] ?? 'Guest';
 
-// Get real level/XP from the database
-$userStmt = $pdo->prepare("SELECT xp, level FROM users WHERE id = ?");
+$userStmt = $pdo->prepare("SELECT xp, level, undo_used FROM users WHERE id = ?");
 $userStmt->execute([$userId]);
 $userRow = $userStmt->fetch();
 
@@ -21,7 +20,6 @@ $xpCurrent = $userRow['xp'];
 $xpTotal = 1000;
 $xpPercent = round(($xpCurrent / $xpTotal) * 100);
 
-// Count grudges by status for the donut chart
 $statusStmt = $pdo->prepare("SELECT status, COUNT(*) as count FROM grudges WHERE user_id = ? GROUP BY status");
 $statusStmt->execute([$userId]);
 $statusCounts = ['Active' => 0, 'In Progress' => 0, 'Resolved' => 0, 'Archived' => 0];
@@ -35,19 +33,21 @@ $resolved = $statusCounts['Resolved'];
 $archived = $statusCounts['Archived'];
 $totalGrudges = $active + $inProgress + $resolved + $archived;
 
-// Pull the 3 most recent grudges
 $recentStmt = $pdo->prepare("SELECT * FROM grudges WHERE user_id = ? ORDER BY date_occurred DESC LIMIT 3");
 $recentStmt->execute([$userId]);
 $recentGrudges = $recentStmt->fetchAll();
 
-// Unread notifications for the banner
 $notifStmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC");
 $notifStmt->execute([$userId]);
 $notifications = $notifStmt->fetchAll();
 
-// Donut chart math (SVG stroke-dasharray based)
-$circumference = 2 * M_PI * 54; // radius 54
-$safeTotal = $totalGrudges > 0 ? $totalGrudges : 1; // avoid divide-by-zero for new accounts
+// Check if an undo is available to show its own banner
+$undoAvailableStmt = $pdo->prepare("SELECT id FROM undo_log WHERE user_id = ? AND restored = 0 ORDER BY created_at DESC LIMIT 1");
+$undoAvailableStmt->execute([$userId]);
+$undoAvailable = (!$userRow['undo_used']) && (bool) $undoAvailableStmt->fetch();
+
+$circumference = 2 * M_PI * 54;
+$safeTotal = $totalGrudges > 0 ? $totalGrudges : 1;
 $activeLen = ($active / $safeTotal) * $circumference;
 $inProgressLen = ($inProgress / $safeTotal) * $circumference;
 $resolvedLen = ($resolved / $safeTotal) * $circumference;
@@ -63,6 +63,14 @@ $archivedLen = ($archived / $safeTotal) * $circumference;
 </div>
 <?php endforeach; ?>
 
+<?php if ($undoAvailable): ?>
+<div class="notification-banner" style="border-color: var(--cyan); background: rgba(0,216,198,0.08);">
+  <span class="notification-icon">↩️</span>
+  <span class="notification-text">You have one undo available. Use it wisely — it only works once.</span>
+  <a href="undo.php" class="notification-link" style="color: var(--cyan);">View Undo</a>
+</div>
+<?php endif; ?>
+
 <div class="dashboard-top">
   <div>
     <h1 class="graffiti-heading">EVERY OFFENSE. NEVER FORGOTTEN.</h1>
@@ -73,7 +81,6 @@ $archivedLen = ($archived / $safeTotal) * $circumference;
 
 <div class="dashboard-columns">
 
-  <!-- Main column -->
   <div class="dashboard-main-col">
     <div class="evidence-card recent-card">
       <div class="tape tape-left"></div>
@@ -97,7 +104,6 @@ $archivedLen = ($archived / $safeTotal) * $circumference;
     </div>
   </div>
 
-  <!-- Right column -->
   <div class="dashboard-side-col">
 
     <div class="evidence-card summary-card">

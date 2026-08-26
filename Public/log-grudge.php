@@ -1,10 +1,7 @@
 <?php
 require 'includes/db.php';
 require_once 'includes/achievements.php';
-// error_reporting(E_ALL);
-// ini_set('display_errors', 1);
-// require 'includes/db.php';
-
+require_once 'includes/game-logic.php';
 
 $pageTitle = "Log a Grudge — Grudge Tracker";
 include 'includes/header.php';
@@ -66,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updateStmt = $pdo->prepare("UPDATE users SET xp = ?, level = ? WHERE id = ?");
         $updateStmt->execute([$newXp, $newLevel, $userId]);
 
+        updateStreak($pdo, $userId);
         checkAchievements($pdo, $userId);
 
         header("Location: all-grudges.php");

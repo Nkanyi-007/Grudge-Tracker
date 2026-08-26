@@ -1,5 +1,6 @@
 <?php
 require 'includes/db.php';
+require_once 'includes/game-logic.php';
 $pageTitle = "Cast Your Verdict — Grudge Tracker";
 include 'includes/header.php';
 
@@ -17,7 +18,6 @@ if (!$disputeId) {
     exit;
 }
 
-// Load the case
 $disputeStmt = $pdo->prepare("
     SELECT d.*, g.title AS grudge_title
     FROM disputes d
@@ -32,7 +32,6 @@ if (!$dispute) {
     exit;
 }
 
-// Confirm this user is actually an invited juror
 $isJurorStmt = $pdo->prepare("SELECT id FROM dispute_jurors WHERE dispute_id = ? AND user_id = ?");
 $isJurorStmt->execute([$disputeId, $userId]);
 $isJuror = (bool) $isJurorStmt->fetch();
@@ -54,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $voteStmt = $pdo->prepare("INSERT IGNORE INTO jury_votes (dispute_id, juror_id, vote, reasoning) VALUES (?, ?, ?, ?)");
         $voteStmt->execute([$disputeId, $userId, $vote, $reasoning]);
+
+        // Check whether all jurors have now voted, and finalize the case if so
+        finalizeVerdictIfReady($pdo, $disputeId);
+
         header("Location: courtroom.php?dispute_id=" . $disputeId);
         exit;
     }

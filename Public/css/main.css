@@ -2019,3 +2019,100 @@ body {
     96% 15%, 100% 0%, 100% 100%, 0% 100%
   );
 }
+
+
+
+/* GRUDGE DETAILS, COMMENTS & LIKES  */
+.grudge-detail-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 800px;
+}
+
+.grudge-detail-card { width: 100%; padding: 2rem; }
+.grudge-detail-header { display: flex; gap: 0.8rem; margin-bottom: 1rem; }
+.grudge-detail-title { font-size: 1.3rem; color: #f0f0f0; margin-bottom: 0.5rem; }
+.grudge-detail-meta { font-size: 0.85rem; color: #888; margin-bottom: 1rem; }
+.grudge-detail-notes { font-size: 0.9rem; color: #ccc; margin-bottom: 1rem; line-height: 1.5; }
+.grudge-detail-emoji { font-size: 2rem; margin-bottom: 1rem; }
+
+.grudge-detail-actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #222;
+}
+.grudge-detail-actions form { margin: 0; }
+.grudge-detail-actions button,
+.grudge-detail-actions a {
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+}
+
+.comments-card { width: 100%; }
+.comments-list { list-style: none; margin-bottom: 1.2rem; }
+.comment-item {
+  background: #0d0d0d;
+  border: 1px solid #262626;
+  border-radius: 4px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.7rem;
+}
+.comment-author { font-size: 0.8rem; color: var(--cyan); font-weight: 700; margin-bottom: 0.3rem; }
+.comment-text { font-size: 0.85rem; color: #eee; }
+.comment-time { font-size: 0.7rem; color: #777; margin-top: 0.4rem; }
+
+.comment-form textarea {
+  width: 100%;
+  background: #0d0d0d;
+  border: 2px solid #333;
+  border-radius: 3px;
+  padding: 0.7rem;
+  color: #fff;
+  font-family: var(--font-body);
+  resize: vertical;
+}
+
+/* DELETE CONFIRMATION PAGE */
+.delete-confirm-card {
+  max-width: 480px;
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.delete-warning-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.delete-warning-text {
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 0.5rem;
+}
+
+.delete-grudge-title {
+  font-size: 1.1rem;
+  color: var(--pink);
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.delete-warning-sub {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+.delete-confirm-actions a {
+  padding: 0.8rem 1.5rem;
+}

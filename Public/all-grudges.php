@@ -53,16 +53,17 @@ $grudges = $stmt->fetchAll();
 
 <div class="grudge-grid" id="grudgeGrid">
   <?php foreach ($grudges as $grudge): ?>
-  <div class="evidence-card grudge-card"
-       data-title="<?php echo strtolower(htmlspecialchars($grudge['title'])); ?>"
-       data-severity="<?php echo $grudge['severity']; ?>"
-       data-status="<?php echo $grudge['status']; ?>">
+  <a href="view-grudge.php?id=<?php echo $grudge['id']; ?>" class="evidence-card grudge-card"
+     data-title="<?php echo strtolower(htmlspecialchars($grudge['title'])); ?>"
+     data-severity="<?php echo $grudge['severity']; ?>"
+     data-status="<?php echo $grudge['status']; ?>"
+     style="text-decoration: none; color: inherit; display: block;">
     <div class="tape tape-left"></div>
     <span class="severity-tag severity-<?php echo strtolower($grudge['severity']); ?>"><?php echo strtoupper($grudge['severity']); ?></span>
     <h3 class="grudge-card-title"><?php echo htmlspecialchars($grudge['title']); ?></h3>
     <p class="grudge-card-meta"><?php echo htmlspecialchars($grudge['category']); ?> · <?php echo date('M j, Y', strtotime($grudge['date_occurred'])); ?></p>
     <span class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $grudge['status'])); ?>"><?php echo $grudge['status']; ?></span>
-  </div>
+  </a>
   <?php endforeach; ?>
 </div>
 
